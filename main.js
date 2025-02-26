@@ -4,12 +4,49 @@
  */
 
 // Game constants
-const GRID_SIZE = 20; // Size of each grid cell in pixels
-const GRID_WIDTH = 30; // Number of cells horizontally
-const GRID_HEIGHT = 20; // Number of cells vertically
+let GRID_SIZE = 20; // Size of each grid cell in pixels (will be adjusted for mobile)
+let GRID_WIDTH = 30; // Number of cells horizontally (will be adjusted for mobile)
+let GRID_HEIGHT = 20; // Number of cells vertically (will be adjusted for mobile)
 const GAME_SPEED = 120; // Base game speed in milliseconds
 const SPEED_INCREASE_FACTOR = 0.98; // Speed increases by this factor with each food eaten
 const MIN_GAME_SPEED = 70; // Minimum game speed (maximum snake speed)
+
+// Responsive grid sizing
+function calculateGridDimensions() {
+    // Get available screen dimensions
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Calculate maximum available space (accounting for margins, headers, etc.)
+    const maxWidth = Math.min(screenWidth - 20, 600); // Max width with 10px margin on each side
+    const maxHeight = Math.min(screenHeight - 150, 400); // Leave space for header and controls
+    
+    // Determine if we're on mobile
+    const isMobile = screenWidth <= 650;
+    
+    if (isMobile) {
+        // Use smaller cells on mobile
+        GRID_SIZE = 15;
+        
+        // Calculate grid dimensions based on available space
+        GRID_WIDTH = Math.floor(maxWidth / GRID_SIZE);
+        GRID_HEIGHT = Math.floor(maxHeight / GRID_SIZE);
+        
+        // Ensure minimum grid size (at least 15x10)
+        GRID_WIDTH = Math.max(15, GRID_WIDTH);
+        GRID_HEIGHT = Math.max(10, GRID_HEIGHT);
+    } else {
+        // Desktop settings
+        GRID_SIZE = 20;
+        GRID_WIDTH = 30;
+        GRID_HEIGHT = 20;
+    }
+    
+    return {
+        width: GRID_WIDTH * GRID_SIZE,
+        height: GRID_HEIGHT * GRID_SIZE
+    };
+}
 
 // Direction constants
 const DIRECTIONS = {
@@ -483,6 +520,9 @@ class GameState {
      * Reset the game to initial state
      */
     resetGame() {
+        // Recalculate grid dimensions in case of resize
+        calculateGridDimensions();
+        
         // Start with a snake of length 3 in the middle of the grid
         const startX = Math.floor(GRID_WIDTH / 2);
         const startY = Math.floor(GRID_HEIGHT / 2);
@@ -677,9 +717,28 @@ class GameRenderer {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // Set canvas dimensions
-        this.canvas.width = GRID_WIDTH * GRID_SIZE;
-        this.canvas.height = GRID_HEIGHT * GRID_SIZE;
+        // Calculate and set responsive canvas dimensions
+        const dimensions = calculateGridDimensions();
+        this.canvas.width = dimensions.width;
+        this.canvas.height = dimensions.height;
+        
+        // Add resize listener
+        window.addEventListener('resize', this.handleResize.bind(this));
+    }
+    
+    /**
+     * Handle window resize events
+     */
+    handleResize() {
+        // Recalculate dimensions
+        const dimensions = calculateGridDimensions();
+        
+        // Update canvas size
+        this.canvas.width = dimensions.width;
+        this.canvas.height = dimensions.height;
+        
+        // Re-render the game
+        this.render();
     }
     
     /**
@@ -914,6 +973,9 @@ class GameRenderer {
 // Game controller - manages the game loop and user interactions
 class GameController {
     constructor() {
+        // Calculate dimensions before creating game state
+        calculateGridDimensions();
+        
         this.gameState = new GameState();
         this.renderer = new GameRenderer(this.gameState);
         this.lastUpdateTime = 0;
@@ -1007,6 +1069,44 @@ class GameController {
 
 // Initialize and start the game when the window loads
 window.addEventListener('load', () => {
+    // Calculate grid dimensions before starting the game
+    calculateGridDimensions();
+    
     const gameController = new GameController();
     gameController.start();
+    
+    // Add touch event handlers for mobile
+    addTouchControls();
 });
+
+/**
+ * Add touch controls for mobile devices
+ */
+function addTouchControls() {
+    // For now, we'll keep the AI in control but make sure the game properly sizes 
+    // and runs well on mobile. If manual controls are needed later, they can be added here.
+    
+    // Prevent unwanted touch behaviors
+    document.addEventListener('touchmove', function(e) {
+        // Prevent scrolling while playing
+        if (e.target.id === 'gameCanvas') {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Prevent double-tap zoom
+    document.addEventListener('touchend', function(e) {
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+        
+        if (e.target.id === 'gameCanvas') {
+            if (now - lastTouchEnd <= DOUBLE_TAP_DELAY) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }
+    }, false);
+    
+    // Track last touch time to prevent double-tap zoom
+    let lastTouchEnd = 0;
+}
