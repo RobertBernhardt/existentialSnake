@@ -1,0 +1,121 @@
+:root {
+    --background-color: #1a1a2e;
+    --border-color: #4a4e69;
+    --text-color: #f8f9fa;
+    --canvas-bg: #0f0f1a;
+    --reflection-bg: rgba(15, 15, 26, 0.85);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+h1 {
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 2rem;
+}
+
+.canvas-container {
+    position: relative;
+    border: 2px solid var(--border-color);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#gameCanvas {
+    display: block;
+    background-color: var(--canvas-bg);
+}
+
+.reflection-box {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px;
+    background-color: var(--reflection-bg);
+    color: var(--text-color);
+    font-style: italic;
+    text-align: center;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+    font-size: 1rem;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.reflection-box.show {
+    transform: translateY(0);
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 600px;
+    padding: 10px;
+}
+
+.score-container {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+#resetBtn {
+    padding: 8px 16px;
+    background-color: #3a506b;
+    color: var(--text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+#resetBtn:hover {
+    background-color: #4a6282;
+}
+
+/* Animation for the snake's color transition */
+@keyframes colorPulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 650px) {
+    .canvas-container {
+        width: 95vw;
+        height: auto;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .reflection-box {
+        font-size: 0.9rem;
+    }
+}
