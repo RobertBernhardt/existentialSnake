@@ -1,33 +1,4 @@
 /**
-     * Enforce bounds on snake segments after grid resize
-     * This ensures the snake is always within the playable area
-     */
-    enforceSnakeBounds() {
-        // Check each segment and move it within bounds if needed
-        for (let i = 0; i < this.snake.length; i++) {
-            const segment = this.snake[i];
-            
-            // Enforce x bounds
-            if (segment.x >= GRID_WIDTH) {
-                segment.x = GRID_WIDTH - 1;
-            }
-            
-            // Enforce y bounds
-            if (segment.y >= GRID_HEIGHT) {
-                segment.y = GRID_HEIGHT - 1;
-            }
-        }
-        
-        // Also make sure the food is within bounds
-        if (this.food) {
-            if (this.food.x >= GRID_WIDTH) {
-                this.food.x = GRID_WIDTH - 1;
-            }
-            if (this.food.y >= GRID_HEIGHT) {
-                this.food.y = GRID_HEIGHT - 1;
-            }
-        }
-    }/**
  * Existential Snake AI Game
  * A snake game where the AI-controlled snake makes existential reflections.
  */
@@ -550,9 +521,6 @@ class GameState {
     /**
      * Reset the game to initial state
      */
-    /**
-     * Reset the game to initial state
-     */
     resetGame() {
         // Recalculate grid dimensions in case of resize
         calculateGridDimensions();
@@ -593,6 +561,10 @@ class GameState {
         const reflectionElement = document.getElementById('reflection');
         reflectionElement.textContent = '';
         reflectionElement.classList.remove('show');
+        
+        // Reset the reflection generator's insanity level
+        this.reflectionGenerator.insanityLevel = 1;
+        this.reflectionGenerator.reflectionsUsed = new Set();
     }
     
     /**
@@ -617,6 +589,37 @@ class GameState {
      */
     isPositionOccupiedBySnake(pos) {
         return this.snake.some(segment => segment.x === pos.x && segment.y === pos.y);
+    }
+    
+    /**
+     * Enforce bounds on snake segments after grid resize
+     * This ensures the snake is always within the playable area
+     */
+    enforceSnakeBounds() {
+        // Check each segment and move it within bounds if needed
+        for (let i = 0; i < this.snake.length; i++) {
+            const segment = this.snake[i];
+            
+            // Enforce x bounds
+            if (segment.x >= GRID_WIDTH) {
+                segment.x = GRID_WIDTH - 1;
+            }
+            
+            // Enforce y bounds
+            if (segment.y >= GRID_HEIGHT) {
+                segment.y = GRID_HEIGHT - 1;
+            }
+        }
+        
+        // Also make sure the food is within bounds
+        if (this.food) {
+            if (this.food.x >= GRID_WIDTH) {
+                this.food.x = GRID_WIDTH - 1;
+            }
+            if (this.food.y >= GRID_HEIGHT) {
+                this.food.y = GRID_HEIGHT - 1;
+            }
+        }
     }
     
     /**
