@@ -1,4 +1,33 @@
 /**
+     * Enforce bounds on snake segments after grid resize
+     * This ensures the snake is always within the playable area
+     */
+    enforceSnakeBounds() {
+        // Check each segment and move it within bounds if needed
+        for (let i = 0; i < this.snake.length; i++) {
+            const segment = this.snake[i];
+            
+            // Enforce x bounds
+            if (segment.x >= GRID_WIDTH) {
+                segment.x = GRID_WIDTH - 1;
+            }
+            
+            // Enforce y bounds
+            if (segment.y >= GRID_HEIGHT) {
+                segment.y = GRID_HEIGHT - 1;
+            }
+        }
+        
+        // Also make sure the food is within bounds
+        if (this.food) {
+            if (this.food.x >= GRID_WIDTH) {
+                this.food.x = GRID_WIDTH - 1;
+            }
+            if (this.food.y >= GRID_HEIGHT) {
+                this.food.y = GRID_HEIGHT - 1;
+            }
+        }
+    }/**
  * Existential Snake AI Game
  * A snake game where the AI-controlled snake makes existential reflections.
  */
@@ -33,14 +62,16 @@ function calculateGridDimensions() {
         GRID_HEIGHT = Math.floor(maxHeight / GRID_SIZE);
         
         // Ensure minimum grid size (at least 15x10)
-        GRID_WIDTH = Math.max(15, GRID_WIDTH);
-        GRID_HEIGHT = Math.max(10, GRID_HEIGHT);
+        GRID_WIDTH = Math.max(15, Math.min(GRID_WIDTH, 30));
+        GRID_HEIGHT = Math.max(10, Math.min(GRID_HEIGHT, 20));
     } else {
         // Desktop settings
         GRID_SIZE = 20;
         GRID_WIDTH = 30;
         GRID_HEIGHT = 20;
     }
+    
+    console.log(`Grid dimensions set to: ${GRID_WIDTH}x${GRID_HEIGHT}, cell size: ${GRID_SIZE}px`);
     
     return {
         width: GRID_WIDTH * GRID_SIZE,
@@ -519,12 +550,15 @@ class GameState {
     /**
      * Reset the game to initial state
      */
+    /**
+     * Reset the game to initial state
+     */
     resetGame() {
         // Recalculate grid dimensions in case of resize
         calculateGridDimensions();
         
         // Start with a snake of length 3 in the middle of the grid
-        const startX = Math.floor(GRID_WIDTH / 2);
+        const startX = Math.min(Math.floor(GRID_WIDTH / 2), GRID_WIDTH - 3);
         const startY = Math.floor(GRID_HEIGHT / 2);
         
         this.snake = [
@@ -652,6 +686,9 @@ class GameState {
             // Remove tail if no food was eaten
             this.snake.pop();
         }
+        
+        // Ensure snake is within bounds
+        this.enforceSnakeBounds();
     }
     
     /**
@@ -736,6 +773,9 @@ class GameRenderer {
         // Update canvas size
         this.canvas.width = dimensions.width;
         this.canvas.height = dimensions.height;
+        
+        // Ensure the snake stays within bounds after resize
+        this.gameState.enforceSnakeBounds();
         
         // Re-render the game
         this.render();
