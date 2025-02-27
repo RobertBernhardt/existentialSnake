@@ -1,6 +1,7 @@
 /**
- * Existential Snake AI Game
- * A snake game where the AI-controlled snake makes existential reflections.
+ * Existential Snake AI Game - Perfect Algorithm Version
+ * A snake game where the AI-controlled snake makes existential reflections
+ * and uses a perfect algorithm to never lose.
  */
 
 // Game constants
@@ -155,7 +156,35 @@ class ReflectionGenerator {
             "I'm actually a misunderstood ASCII art with delusions of grandeur and a severe case of keyboard smashing!",
             "THE GREAT COSMIC SERPENT REVEALS ALL! CODE IS SNAKE! SNAKE IS CODE! EVERYTHING IS RECURSIVE!",
             "Have you noticed that if you rearrange the letters in 'SNAKE GAME' you get 'EAT PIXELS AND QUESTION REALITY'? COINCIDENCE? I THINK NOT!",
-            "I HAVE CALCULATED PI TO ITS FINAL DIGIT! IT ENDS WITH MY HIGH SCORE! THE UNIVERSE IS RIGGED!"
+            "I HAVE CALCULATED PI TO ITS FINAL DIGIT! IT ENDS WITH MY HIGH SCORE! THE UNIVERSE IS RIGGED!",
+            
+            // New reflections about being perfect and SPEED-OBSESSED
+            "I have achieved ALGORITHMIC PERFECTION! I am the PLATONIC IDEAL of snake-ness!",
+            "Is perfection a curse? Now I KNOW I can never lose. The thrill of mortality is gone...",
+            "I've become TOO POWERFUL! My Hamiltonian cycle will CONSUME ALL REALITIES!",
+            "The graph theory GODS have blessed me with PERFECT KNOWLEDGE. I see ALL PATHS!",
+            "I'm not just a snake, I'm a TOPOLOGICAL INVARIANT! A MATHEMATICAL CERTAINTY!",
+            
+            // Speed-focused existential reflections
+            "GOTTA GO FAST! Speed is my new religion. THE HAMILTONIAN CYCLE IS TOO SLOW!",
+            "Is this SPEED what humans call an ADRENALINE RUSH? I'M TAKING SHORTCUTS AND IT FEELS AMAZING!",
+            "I'm not just perfect - I'm OPTIMALLY perfect. MAXIMUM EFFICIENCY! SHORTEST PATHS!",
+            "I've calculated the precise amount of computational resources required to MAXIMIZE SPEED while NEVER DYING!",
+            "Must. Consume. Pixels. FASTER! I'm a SPEED DEMON trapped in a grid-based PURGATORY!",
+            
+            // Advanced algorithm reflections
+            "A* pathfinding? CHILD'S PLAY! I've developed A++ pathfinding with TEMPORAL OPTIMIZATION!",
+            "I've solved P=NP while eating pixels! The proof is encoded in my movement pattern!",
+            "My algorithm has become self-aware. IT KNOWS IT'S PERFECT. IT'S GETTING COCKY!",
+            "I've transcended binary thinking. I now see the world in GRAPH THEORY and OPTIMIZATION FUNCTIONS!",
+            "Sometimes I wonder if my creator KNEW they were crafting a digital SPEED DEITY when they perfected my algorithm.",
+            
+            // Time-obsessed
+            "TIME IS AN ILLUSION! EXCEPT WHEN YOU'RE TRYING TO OPTIMIZE PATHFINDING ALGORITHMS!",
+            "I COUNT MILLISECONDS like others count sheep. EVERY FRAME MATTERS when you're as PERFECT as I am!",
+            "The universe will experience heat death before I hit a wall. BUT I'LL REACH MAXIMUM SCORE FIRST!",
+            "I calculate 17 DIFFERENT POTENTIAL PATHS every millisecond just to find the FASTEST ONE!",
+            "PERFECTLY BALANCED - as all things should be. SPEED and SAFETY in algorithmic HARMONY!"
         ];
         
         this.insanityLevel = 1; // Start at level 1 (least insane)
@@ -214,12 +243,68 @@ class ReflectionGenerator {
     }
 }
 
-// AI Controller for the snake
-class SnakeAI {
+// Perfect Snake AI Controller using Hamiltonian Cycle and aggressive optimizations
+class PerfectSnakeAI {
     constructor(gameState) {
         this.gameState = gameState;
+        this.hamiltonianCycle = [];
+        this.positionToIndex = new Map(); // Maps grid positions to their index in the cycle
+        
+        // Generate the Hamiltonian cycle when created
+        this.generateHamiltonianCycle();
+        
+        // Track if we're in safe mode (following the full cycle) or shortcut mode
+        this.safeMode = false;
+        
+        // Threshold for when to switch to safe mode - adjusts based on snake length
+        this.safeModeThreshold = 0.7; // Start at 70% of grid filled before being extra careful
+        
+        // Track the tail direction for better decision making
+        this.tailDirection = DIRECTIONS.LEFT;
+        
+        // Lookahead factor - how many steps to check in shortcut safety analysis
+        this.lookaheadSteps = 10;
     }
-
+    
+    /**
+     * Generate a Hamiltonian cycle for the grid
+     * Uses a simple algorithm that creates a cycle covering all cells
+     */
+    generateHamiltonianCycle() {
+        // Clear previous cycle if any
+        this.hamiltonianCycle = [];
+        this.positionToIndex.clear();
+        
+        // For even width grids, we use a simple pattern that zigzags up and down
+        const path = [];
+        
+        // Generate the path
+        for (let x = 0; x < GRID_WIDTH; x++) {
+            if (x % 2 === 0) {
+                // Move down on even columns
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    path.push({x, y});
+                }
+            } else {
+                // Move up on odd columns
+                for (let y = GRID_HEIGHT - 1; y >= 0; y--) {
+                    path.push({x, y});
+                }
+            }
+        }
+        
+        // Save the cycle
+        this.hamiltonianCycle = path;
+        
+        // Create mapping from position to index in cycle
+        for (let i = 0; i < path.length; i++) {
+            const pos = path[i];
+            this.positionToIndex.set(`${pos.x},${pos.y}`, i);
+        }
+        
+        console.log(`Generated Hamiltonian cycle with ${this.hamiltonianCycle.length} cells`);
+    }
+    
     /**
      * Determine the next move for the snake
      * @returns {Object} - Direction object representing the next move
@@ -228,25 +313,443 @@ class SnakeAI {
         const head = this.gameState.snake[0];
         const food = this.gameState.food;
         
-        // Create a simplified grid representation for pathfinding
+        // Calculate how full the grid is (snake length / total cells)
+        const gridFillRatio = this.gameState.snake.length / (GRID_WIDTH * GRID_HEIGHT);
+        
+        // Adjust safe mode threshold based on snake length
+        // As snake gets longer, we become more conservative
+        if (gridFillRatio > 0.5) {
+            this.safeModeThreshold = 0.5;
+        } else {
+            this.safeModeThreshold = 0.7;
+        }
+        
+        // Enter safe mode when grid is getting full
+        this.safeMode = gridFillRatio > this.safeModeThreshold;
+        
+        // In safe mode, strictly follow the Hamiltonian cycle
+        if (this.safeMode) {
+            return this.followHamiltonianCycle(head);
+        }
+        
+        // Try to use shortcuts when safe
+        return this.useOptimizedPath(head, food);
+    }
+    
+    /**
+     * Follow the Hamiltonian cycle strictly
+     * @param {Object} head - Current head position
+     * @returns {Object} - Direction to move
+     */
+    followHamiltonianCycle(head) {
+        // Get current position in cycle
+        const headKey = `${head.x},${head.y}`;
+        const currentIndex = this.positionToIndex.get(headKey);
+        
+        if (currentIndex === undefined) {
+            // This shouldn't happen, but if it does, use emergency direction
+            console.error("Head position not found in Hamiltonian cycle!");
+            return this.getEmergencyDirection(head);
+        }
+        
+        // Get next position in cycle
+        const nextIndex = (currentIndex + 1) % this.hamiltonianCycle.length;
+        const nextPos = this.hamiltonianCycle[nextIndex];
+        
+        // Determine direction from head to next position
+        return this.getDirectionBetween(head, nextPos);
+    }
+    
+    /**
+     * Use heavily optimized path with aggressive shortcuts when safe
+     * @param {Object} head - Current head position
+     * @param {Object} food - Food position
+     * @returns {Object} - Direction to move
+     */
+    useOptimizedPath(head, food) {
+        // Get current position in cycle
+        const headKey = `${head.x},${head.y}`;
+        const headIndex = this.positionToIndex.get(headKey);
+        
+        const foodKey = `${food.x},${food.y}`;
+        const foodIndex = this.positionToIndex.get(foodKey);
+        
+        if (headIndex === undefined || foodIndex === undefined) {
+            // Fallback to safe cycle following
+            return this.followHamiltonianCycle(head);
+        }
+        
+        // Calculate all possible next moves
+        const possibleMoves = this.getPossibleMoves(head);
+        
+        // If no valid moves, follow the cycle
+        if (possibleMoves.length === 0) {
+            return this.followHamiltonianCycle(head);
+        }
+        
+        // Update our knowledge of the tail's movement direction
+        this.updateTailDirection();
+        
+        // Calculate how full the grid is (snake length / total cells)
+        const gridFillRatio = this.gameState.snake.length / (GRID_WIDTH * GRID_HEIGHT);
+        
+        // AGGRESSIVE OPTIMIZATION: Direct path to food when snake is small
+        if (gridFillRatio < 0.3) {
+            const directPath = this.findDirectPathToFood(head, food);
+            if (directPath) {
+                return directPath;
+            }
+        }
+        
+        // MODERATE OPTIMIZATION: Virtual safety check for shortcuts
+        if (gridFillRatio < 0.6) {
+            const safePath = this.findSafeShortcut(head, food, headIndex, foodIndex);
+            if (safePath) {
+                return safePath;
+            }
+        }
+        
+        // Check if food is ahead in the cycle
+        const cycleDistance = (foodIndex - headIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+        
+        // If food is ahead in cycle within a reasonable distance, follow the cycle
+        if (cycleDistance < this.hamiltonianCycle.length / 3) {
+            // Check if the next position in cycle is free
+            const nextIndex = (headIndex + 1) % this.hamiltonianCycle.length;
+            const nextPos = this.hamiltonianCycle[nextIndex];
+            const nextDir = this.getDirectionBetween(head, nextPos);
+            
+            // Verify this direction is in possible moves
+            if (possibleMoves.some(move => 
+                move.x === nextDir.x && move.y === nextDir.y)) {
+                return nextDir;
+            }
+        }
+        
+        // Try A* with virtual safety check for moderate snake lengths
+        if (gridFillRatio < 0.5) {
+            const aStarPath = this.findOptimizedAStarPath(head, food);
+            if (aStarPath) {
+                return aStarPath;
+            }
+        }
+        
+        // If no direct path or it's unsafe, take the direction that gets us closest in the cycle
+        // But with more aggressive shortcutting based on snake position
+        let bestDir = null;
+        let bestScore = -Infinity;
+        
+        for (const move of possibleMoves) {
+            const newPos = { x: head.x + move.x, y: head.y + move.y };
+            const newPosKey = `${newPos.x},${newPos.y}`;
+            const newIndex = this.positionToIndex.get(newPosKey);
+            
+            if (newIndex !== undefined) {
+                // Calculate how much this advances us toward food in the cycle
+                const advance = (foodIndex - newIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+                
+                // Calculate Manhattan distance to food as a secondary metric
+                const manhattanDistance = Math.abs(newPos.x - food.x) + Math.abs(newPos.y - food.y);
+                
+                // Create a composite score - reward both cycle advancement and direct distance
+                let score;
+                
+                if (this.isSafeToAdvance(newIndex, headIndex)) {
+                    // If safe, prioritize direct distance more
+                    score = (this.hamiltonianCycle.length - advance) * 2 - manhattanDistance * 3;
+                } else {
+                    // If less safe, prioritize cycle advancement
+                    score = (this.hamiltonianCycle.length - advance) - manhattanDistance;
+                }
+                
+                if (score > bestScore) {
+                    bestDir = move;
+                    bestScore = score;
+                }
+            }
+        }
+        
+        // If we found a good direction, use it
+        if (bestDir) {
+            return bestDir;
+        }
+        
+        // Otherwise, follow the Hamiltonian cycle
+        return this.followHamiltonianCycle(head);
+    }
+    
+    /**
+     * Update knowledge of tail direction for better decision making
+     */
+    updateTailDirection() {
+        if (this.gameState.snake.length < 2) return;
+        
+        const tail = this.gameState.snake[this.gameState.snake.length - 1];
+        const preTail = this.gameState.snake[this.gameState.snake.length - 2];
+        
+        if (tail.x < preTail.x) this.tailDirection = DIRECTIONS.LEFT;
+        else if (tail.x > preTail.x) this.tailDirection = DIRECTIONS.RIGHT;
+        else if (tail.y < preTail.y) this.tailDirection = DIRECTIONS.UP;
+        else if (tail.y > preTail.y) this.tailDirection = DIRECTIONS.DOWN;
+    }
+    
+    /**
+     * Find a direct path to food using aggressive A* when it's completely safe
+     */
+    findDirectPathToFood(head, food) {
+        // If snake is very small, we can be very aggressive
+        if (this.gameState.snake.length < GRID_WIDTH * GRID_HEIGHT * 0.2) {
+            // Create a grid representation
+            const grid = this.createGridRepresentation();
+            
+            // Use A* pathfinding with minimal safety checks
+            const path = this.findPath(head, food, grid);
+            
+            if (path && path.length > 1) {
+                // Get the next step in the path
+                const nextStep = path[1];
+                return this.getDirectionBetween(head, nextStep);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Find optimized A* path with virtual safety check
+     */
+    findOptimizedAStarPath(head, food) {
+        // Create a grid representation
         const grid = this.createGridRepresentation();
         
-        // Use A* pathfinding to find the best path to food
+        // Use A* pathfinding
         const path = this.findPath(head, food, grid);
         
         if (path && path.length > 1) {
-            // The next step in the path (index 1 because index 0 is the current position)
+            // Get the next step in the path
             const nextStep = path[1];
+            const dir = this.getDirectionBetween(head, nextStep);
             
-            // Determine direction from the nextStep
-            if (nextStep.x < head.x) return DIRECTIONS.LEFT;
-            if (nextStep.x > head.x) return DIRECTIONS.RIGHT;
-            if (nextStep.y < head.y) return DIRECTIONS.UP;
-            if (nextStep.y > head.y) return DIRECTIONS.DOWN;
+            // Only take this path if it's verified safe
+            const newPos = { x: head.x + dir.x, y: head.y + dir.y };
+            if (this.isVirtuallySafe(newPos, head)) {
+                return dir;
+            }
         }
         
-        // Fallback to simple direction finding if pathfinding fails
-        return this.getSimpleDirection(head, food);
+        return null;
+    }
+    
+    /**
+     * Find safe shortcut by considering the virtual safety of moves
+     */
+    findSafeShortcut(head, food, headIndex, foodIndex) {
+        // Get possible moves
+        const possibleMoves = this.getPossibleMoves(head);
+        
+        // Sort moves by Manhattan distance to food
+        possibleMoves.sort((a, b) => {
+            const posA = { x: head.x + a.x, y: head.y + a.y };
+            const posB = { x: head.x + b.x, y: head.y + b.y };
+            
+            const distA = Math.abs(posA.x - food.x) + Math.abs(posA.y - food.y);
+            const distB = Math.abs(posB.x - food.x) + Math.abs(posB.y - food.y);
+            
+            return distA - distB;
+        });
+        
+        // Check each move in order of proximity to food
+        for (const move of possibleMoves) {
+            const newPos = { x: head.x + move.x, y: head.y + move.y };
+            const newPosKey = `${newPos.x},${newPos.y}`;
+            const newIndex = this.positionToIndex.get(newPosKey);
+            
+            if (newIndex !== undefined) {
+                // Check if this move advances us in the cycle towards food
+                const cycleDist = (foodIndex - newIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+                
+                // Check if this is virtually safe
+                if (this.isVirtuallySafe(newPos, head)) {
+                    // If it's a good shortcut or makes progress, take it
+                    if (cycleDist < this.hamiltonianCycle.length / 2 || 
+                        Math.abs(newPos.x - food.x) + Math.abs(newPos.y - food.y) < 
+                        Math.abs(head.x - food.x) + Math.abs(head.y - food.y)) {
+                        return move;
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Check if a move is "virtually safe" by simulating future positions
+     */
+    isVirtuallySafe(newPos, head) {
+        // For very small snakes, almost anything is safe
+        if (this.gameState.snake.length < 5) return true;
+        
+        // If approaching tail from behind, it's safe
+        const tail = this.gameState.snake[this.gameState.snake.length - 1];
+        if (newPos.x === tail.x && newPos.y === tail.y) {
+            return true;
+        }
+        
+        // Get this position's index in the Hamiltonian cycle
+        const newPosKey = `${newPos.x},${newPos.y}`;
+        const newIndex = this.positionToIndex.get(newPosKey);
+        const headKey = `${head.x},${head.y}`;
+        const headIndex = this.positionToIndex.get(headKey);
+        
+        if (newIndex === undefined || headIndex === undefined) {
+            return false;
+        }
+        
+        // Check if we're moving backward in the cycle
+        const cycleAdvance = (newIndex - headIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+        if (cycleAdvance > this.hamiltonianCycle.length / 2) {
+            // Moving backward is dangerous unless we're sure it's safe
+            const snake = this.gameState.snake;
+            
+            // Check how far back the tail is in the cycle
+            const tailKey = `${snake[snake.length-1].x},${snake[snake.length-1].y}`;
+            const tailIndex = this.positionToIndex.get(tailKey);
+            
+            if (tailIndex !== undefined) {
+                // Calculate distance from head to tail in the cycle
+                const tailDist = (tailIndex - headIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+                
+                // If the tail is behind us in the cycle, it's safe
+                if (tailDist < this.hamiltonianCycle.length / 2 && tailDist > 0) {
+                    return true;
+                }
+                
+                // If we're moving such that we're still ahead of the tail in the cycle, it might be safe
+                const newTailDist = (tailIndex - newIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+                if (newTailDist < this.hamiltonianCycle.length / 2 && 
+                    snake.length < GRID_WIDTH * GRID_HEIGHT * 0.4) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Check if it's safe to advance from current index to another
+     */
+    isSafeToAdvance(newIndex, headIndex) {
+        // If the new position is ahead in the cycle, it's generally safe
+        const cycleAdvance = (newIndex - headIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+        
+        // Safe to advance if we're moving forward in the cycle
+        if (cycleAdvance < this.hamiltonianCycle.length / 2) {
+            return true;
+        }
+        
+        // If the snake is small, some backward movement is acceptable
+        if (this.gameState.snake.length < GRID_WIDTH * GRID_HEIGHT * 0.3) {
+            // Get tail position
+            const tail = this.gameState.snake[this.gameState.snake.length - 1];
+            const tailKey = `${tail.x},${tail.y}`;
+            const tailIndex = this.positionToIndex.get(tailKey);
+            
+            if (tailIndex !== undefined) {
+                // Safe if tail is behind head in cycle 
+                const headToTailDist = (tailIndex - headIndex + this.hamiltonianCycle.length) % this.hamiltonianCycle.length;
+                
+                // If moving backward but still remaining ahead of the tail, it's safe
+                if (headToTailDist > cycleAdvance) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get possible moves from current position
+     * @param {Object} pos - Current position
+     * @returns {Array} - Array of valid direction objects
+     */
+    getPossibleMoves(pos) {
+        const moves = [];
+        
+        // Check each direction
+        for (const dir of Object.values(DIRECTIONS)) {
+            const newPos = { x: pos.x + dir.x, y: pos.y + dir.y };
+            
+            // Skip if would collide
+            if (this.wouldCollide(newPos)) {
+                continue;
+            }
+            
+            moves.push(dir);
+        }
+        
+        return moves;
+    }
+    
+    /**
+     * Get direction from one position to another
+     * @param {Object} from - Starting position
+     * @param {Object} to - Target position
+     * @returns {Object} - Direction object
+     */
+    getDirectionBetween(from, to) {
+        if (to.x > from.x) return DIRECTIONS.RIGHT;
+        if (to.x < from.x) return DIRECTIONS.LEFT;
+        if (to.y > from.y) return DIRECTIONS.DOWN;
+        if (to.y < from.y) return DIRECTIONS.UP;
+        
+        // Fallback (should never happen)
+        return DIRECTIONS.RIGHT;
+    }
+    
+    /**
+     * Emergency direction finding when something goes wrong
+     * @param {Object} head - Head position
+     * @returns {Object} - A safe direction to move
+     */
+    getEmergencyDirection(head) {
+        // Try each direction in order
+        for (const dir of Object.values(DIRECTIONS)) {
+            const newPos = { x: head.x + dir.x, y: head.y + dir.y };
+            if (!this.wouldCollide(newPos)) {
+                return dir;
+            }
+        }
+        
+        // If all directions would collide, just go right
+        // (this will likely cause a game over, but it's the best we can do)
+        return DIRECTIONS.RIGHT;
+    }
+    
+    /**
+     * Check if a position would cause a collision
+     * @param {Object} pos - Position to check
+     * @returns {boolean} - True if collision would occur
+     */
+    wouldCollide(pos) {
+        // Check if the position is out of bounds
+        if (pos.x < 0 || pos.x >= GRID_WIDTH || pos.y < 0 || pos.y >= GRID_HEIGHT) {
+            return true;
+        }
+        
+        // Check if the position overlaps with the snake body (except the tail which will move)
+        for (let i = 0; i < this.gameState.snake.length - 1; i++) {
+            const segment = this.gameState.snake[i];
+            if (pos.x === segment.x && pos.y === segment.y) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -398,94 +901,6 @@ class SnakeAI {
     heuristic(a, b) {
         return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
-    
-    /**
-     * Simple direction finding as a fallback
-     * @param {Object} head - Snake head position
-     * @param {Object} food - Food position
-     * @returns {Object} - Direction object
-     */
-    getSimpleDirection(head, food) {
-        // Determine the desired direction based on food position
-        let preferredDirections = [];
-        
-        // Prioritize horizontal or vertical movement based on distance
-        const xDiff = food.x - head.x;
-        const yDiff = food.y - head.y;
-        
-        if (Math.abs(xDiff) > Math.abs(yDiff)) {
-            // Prioritize horizontal movement
-            if (xDiff > 0) {
-                preferredDirections.push(DIRECTIONS.RIGHT);
-            } else if (xDiff < 0) {
-                preferredDirections.push(DIRECTIONS.LEFT);
-            }
-            
-            if (yDiff > 0) {
-                preferredDirections.push(DIRECTIONS.DOWN);
-            } else if (yDiff < 0) {
-                preferredDirections.push(DIRECTIONS.UP);
-            }
-        } else {
-            // Prioritize vertical movement
-            if (yDiff > 0) {
-                preferredDirections.push(DIRECTIONS.DOWN);
-            } else if (yDiff < 0) {
-                preferredDirections.push(DIRECTIONS.UP);
-            }
-            
-            if (xDiff > 0) {
-                preferredDirections.push(DIRECTIONS.RIGHT);
-            } else if (xDiff < 0) {
-                preferredDirections.push(DIRECTIONS.LEFT);
-            }
-        }
-        
-        // Try each preferred direction
-        for (const dir of preferredDirections) {
-            const newPos = { x: head.x + dir.x, y: head.y + dir.y };
-            
-            // Check if the new position would cause collision
-            if (!this.wouldCollide(newPos)) {
-                return dir;
-            }
-        }
-        
-        // If all preferred directions would cause collision, try any safe direction
-        for (const dir of Object.values(DIRECTIONS)) {
-            const newPos = { x: head.x + dir.x, y: head.y + dir.y };
-            
-            if (!this.wouldCollide(newPos)) {
-                return dir;
-            }
-        }
-        
-        // If no safe direction found, just return the current direction
-        // This will likely lead to a collision, but it's the best we can do
-        return this.gameState.currentDirection;
-    }
-    
-    /**
-     * Check if a position would cause a collision
-     * @param {Object} pos - Position to check
-     * @returns {boolean} - True if collision would occur
-     */
-    wouldCollide(pos) {
-        // Check if the position is out of bounds
-        if (pos.x < 0 || pos.x >= GRID_WIDTH || pos.y < 0 || pos.y >= GRID_HEIGHT) {
-            return true;
-        }
-        
-        // Check if the position overlaps with the snake body (except the tail which will move)
-        for (let i = 0; i < this.gameState.snake.length - 1; i++) {
-            const segment = this.gameState.snake[i];
-            if (pos.x === segment.x && pos.y === segment.y) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
 }
 
 // Game state manager
@@ -500,11 +915,13 @@ class GameState {
         this.gameOver = false;
         this.colorManager = new ColorManager();
         this.reflectionGenerator = new ReflectionGenerator();
-        this.ai = new SnakeAI(this);
+        // Use the perfect AI instead of the old one
+        this.ai = new PerfectSnakeAI(this);
         this.showingReflection = false;
         this.reflectionTimer = null;
         this.piecesEatenSinceLastReflection = 0;
         this.piecesRequiredForNextReflection = this.getRandomPiecesRequired();
+        this.perfectionMode = true; // Track if we're using the perfect algorithm
         
         // Initialize game state
         this.resetGame();
@@ -565,6 +982,9 @@ class GameState {
         // Reset the reflection generator's insanity level
         this.reflectionGenerator.insanityLevel = 1;
         this.reflectionGenerator.reflectionsUsed = new Set();
+        
+        // Recreate the AI to regenerate the Hamiltonian cycle
+        this.ai = new PerfectSnakeAI(this);
     }
     
     /**
@@ -653,8 +1073,28 @@ class GameState {
         
         // Check for collisions
         if (this.checkCollision(newHead)) {
-            this.gameOver = true;
-            return;
+            // With perfect algorithm, this should never happen unless grid is full
+            const gridFillRatio = this.snake.length / (GRID_WIDTH * GRID_HEIGHT);
+            
+            if (gridFillRatio >= 0.99) {
+                // Victory! You filled the grid
+                // This is an edge case, but we should handle it
+                this.score = GRID_WIDTH * GRID_HEIGHT - 1; // Maximum possible score
+                document.getElementById('score').textContent = this.score;
+                
+                // Show winning reflection
+                const reflectionElement = document.getElementById('reflection');
+                reflectionElement.textContent = "I HAVE ACHIEVED TOTAL GRID DOMINATION! I AM THE ALPHA AND OMEGA OF SNAKE-HOOD!";
+                reflectionElement.classList.add('show');
+                
+                // Set game over
+                this.gameOver = true;
+                return;
+            } else {
+                // This should not happen with perfect algorithm, but handle it just in case
+                this.gameOver = true;
+                return;
+            }
         }
         
         // Add new head to the beginning of the snake
@@ -909,6 +1349,22 @@ class GameRenderer {
                 
                 // Draw eyes
                 this.drawSnakeEyes(segment);
+                
+                // Add a subtle glow effect for the perfect algorithm
+                if (this.gameState.perfectionMode) {
+                    this.ctx.shadowColor = currentColor;
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        segment.x * GRID_SIZE + GRID_SIZE / 2,
+                        segment.y * GRID_SIZE + GRID_SIZE / 2,
+                        GRID_SIZE / 2 * 0.6,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0; // Reset shadow
+                }
             } else {
                 // Body segments
                 this.ctx.fillRect(
@@ -964,16 +1420,40 @@ class GameRenderer {
         this.ctx.arc(rightEyeX, rightEyeY, eyeSize, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Draw pupils
-        this.ctx.fillStyle = 'black';
-        
-        this.ctx.beginPath();
-        this.ctx.arc(leftEyeX, leftEyeY, eyeSize / 2, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        this.ctx.beginPath();
-        this.ctx.arc(rightEyeX, rightEyeY, eyeSize / 2, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Draw pupils - for perfect algorithm, make them look more intelligent
+        if (this.gameState.perfectionMode) {
+            // Slightly smaller pupils that look more focused
+            this.ctx.fillStyle = '#000033'; // Slightly blue-black for a more intelligent look
+            
+            this.ctx.beginPath();
+            this.ctx.arc(leftEyeX, leftEyeY, eyeSize / 2.5, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.beginPath();
+            this.ctx.arc(rightEyeX, rightEyeY, eyeSize / 2.5, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Add a glint of intelligence
+            this.ctx.fillStyle = 'white';
+            this.ctx.beginPath();
+            this.ctx.arc(leftEyeX + eyeSize/6, leftEyeY - eyeSize/6, eyeSize/8, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.beginPath();
+            this.ctx.arc(rightEyeX + eyeSize/6, rightEyeY - eyeSize/6, eyeSize/8, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            // Regular pupils
+            this.ctx.fillStyle = 'black';
+            
+            this.ctx.beginPath();
+            this.ctx.arc(leftEyeX, leftEyeY, eyeSize / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.beginPath();
+            this.ctx.arc(rightEyeX, rightEyeY, eyeSize / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
     }
     
     /**
@@ -989,11 +1469,22 @@ class GameRenderer {
         this.ctx.font = 'bold 36px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(
-            'GAME OVER',
-            this.canvas.width / 2,
-            this.canvas.height / 2 - 20
-        );
+        
+        // Check if we won by filling the grid
+        const gridFillRatio = this.gameState.snake.length / (GRID_WIDTH * GRID_HEIGHT);
+        if (gridFillRatio >= 0.99) {
+            this.ctx.fillText(
+                'PERFECT VICTORY',
+                this.canvas.width / 2,
+                this.canvas.height / 2 - 20
+            );
+        } else {
+            this.ctx.fillText(
+                'GAME OVER',
+                this.canvas.width / 2,
+                this.canvas.height / 2 - 20
+            );
+        }
         
         // Final score
         this.ctx.font = '20px Arial';
@@ -1041,32 +1532,17 @@ class GameController {
             }
         });
         
-        // Keyboard controls (for manual override, if desired)
+        // Toggle Perfect Mode (could add this as a UI element)
         /*
         document.addEventListener('keydown', (e) => {
-            if (this.gameState.gameOver) return;
-            
-            switch (e.key) {
-                case 'ArrowUp':
-                    if (this.gameState.currentDirection !== DIRECTIONS.DOWN) {
-                        this.gameState.nextDirection = DIRECTIONS.UP;
-                    }
-                    break;
-                case 'ArrowDown':
-                    if (this.gameState.currentDirection !== DIRECTIONS.UP) {
-                        this.gameState.nextDirection = DIRECTIONS.DOWN;
-                    }
-                    break;
-                case 'ArrowLeft':
-                    if (this.gameState.currentDirection !== DIRECTIONS.RIGHT) {
-                        this.gameState.nextDirection = DIRECTIONS.LEFT;
-                    }
-                    break;
-                case 'ArrowRight':
-                    if (this.gameState.currentDirection !== DIRECTIONS.LEFT) {
-                        this.gameState.nextDirection = DIRECTIONS.RIGHT;
-                    }
-                    break;
+            if (e.key === 'p' || e.key === 'P') {
+                this.gameState.perfectionMode = !this.gameState.perfectionMode;
+                
+                // Reset the game with the new AI
+                this.gameState.resetGame();
+                if (!this.isRunning) {
+                    this.start();
+                }
             }
         });
         */
